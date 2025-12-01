@@ -168,10 +168,13 @@ private fun Screen(
         sheetContent = {
             RideInfoSheetContent(
                 deliveryStatus = deliveryStatusHelper(state.delivery?.deliveryStatus),
+                riderLabel = riderLabelHelper(state.delivery?.deliveryStatus),
                 name = "${state.delivery?.orders?.first()?.customer?.first_name} ${state.delivery?.orders?.first()?.customer?.last_name}",
-                destinationLocation = LatLng(state.delivery?.address?.latitude ?: 0.0, state.delivery?.address?.longitude ?: 0.0),
-                pickupAddress = "${ state.delivery?.address?.addressLine }, ${state.delivery?.address?.barangay}, ${state.delivery?.address?.city}, ${state.delivery?.address?.region}, ${state.delivery?.address?.postalCode}  ",
-                stops = 2,
+                destinationLocation = LatLng(
+                    state.delivery?.address?.latitude ?: 0.0,
+                    state.delivery?.address?.longitude ?: 0.0
+                ),
+                pickupAddress = "${state.delivery?.address?.addressLine}, ${state.delivery?.address?.barangay}, ${state.delivery?.address?.city}, ${state.delivery?.address?.region}, ${state.delivery?.address?.postalCode}  ",
                 amount = "${state.delivery?.orders?.first()?.totalPrice}",
                 onUpdateStatus = { onAction(RiderMapAction.UpdateOrderStatus) },
                 onNavigate = {
@@ -238,14 +241,14 @@ private fun Screen(
             }
 
 
-
-
         }
     }
 
     if (state.isLoading) {
         Column(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.2f)),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -258,7 +261,6 @@ private fun Screen(
     }
 
 
-
     // 5. Remove RideInfoBottomModal, it's replaced by sheetContent
 }
 
@@ -269,10 +271,10 @@ private fun Screen(
 fun RideInfoSheetContent(
     modifier: Modifier = Modifier,
     deliveryStatus: String,
+    riderLabel: String,
     name: String,
     destinationLocation: LatLng? = null,
     pickupAddress: String,
-    stops: Int = 2,
     amount: String,
     onUpdateStatus: () -> Unit,
     onNavigate: () -> Unit
@@ -292,71 +294,35 @@ fun RideInfoSheetContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            color = Color(0xFF9A501E),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stops.toString(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.NearMe,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = Color(0xFF4CAF50)
+                )
                 Text(
-                    text = "Stops",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    text = riderLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF4CAF50)
                 )
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        destinationLocation?.let {
-                            NavigationHelper.navigateWithGoogleMaps(
-                                context = context,
-                                destinationLat = it.latitude,
-                                destinationLng = it.longitude,
-                                destinationLabel = pickupAddress
-                            )
-                            onNavigate()
-                        }
-                    },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            color = Color(0xFFE8F5E9),
-                            shape = CircleShape
-                        )
+            if (riderLabel != "Well done! Order Completed") {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Directions,
-                        contentDescription = "Navigate with Google Maps",
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Waze button
-                if (NavigationHelper.isWazeInstalled(context)) {
                     IconButton(
                         onClick = {
                             destinationLocation?.let {
-                                NavigationHelper.navigateWithWaze(
+                                NavigationHelper.navigateWithGoogleMaps(
                                     context = context,
                                     destinationLat = it.latitude,
-                                    destinationLng = it.longitude
+                                    destinationLng = it.longitude,
+                                    destinationLabel = pickupAddress
                                 )
                                 onNavigate()
                             }
@@ -364,46 +330,52 @@ fun RideInfoSheetContent(
                         modifier = Modifier
                             .size(48.dp)
                             .background(
-                                color = Color(0xFFE3F2FD),
+                                color = Color(0xFFE8F5E9),
                                 shape = CircleShape
                             )
                     ) {
-                        // Using a placeholder icon, ideally use a custom Waze icon
                         Icon(
-                            imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = "Navigate with Waze",
-                            tint = Color(0xFF2196F3),
+                            imageVector = Icons.Default.Directions,
+                            contentDescription = "Navigate with Google Maps",
+                            tint = Color(0xFF4CAF50),
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    // Waze button
+                    if (NavigationHelper.isWazeInstalled(context)) {
+                        IconButton(
+                            onClick = {
+                                destinationLocation?.let {
+                                    NavigationHelper.navigateWithWaze(
+                                        context = context,
+                                        destinationLat = it.latitude,
+                                        destinationLng = it.longitude
+                                    )
+                                    onNavigate()
+                                }
+                            },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    color = Color(0xFFE3F2FD),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            // Using a placeholder icon, ideally use a custom Waze icon
+                            Icon(
+                                imageVector = Icons.Default.DirectionsCar,
+                                contentDescription = "Navigate with Waze",
+                                tint = Color(0xFF2196F3),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.NearMe,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = Color(0xFF4CAF50)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Pick up food",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF4CAF50)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         // Address section
         Text(
@@ -482,7 +454,7 @@ fun RideInfoSheetContent(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
-            }
+        }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) // Added separator
 
@@ -677,6 +649,21 @@ private fun deliveryStatusHelper(status: String?): String {
         "complete order" -> "Order Completed"
         else -> "Cancelled"
     }
+    return status
+}
+
+private fun riderLabelHelper(status: String?): String {
+    val status = when (status?.lowercase()) {
+        null -> "Navigate to Store"
+        "navigate to store" -> "Go to Store"
+        "arrived at store" -> "Pick up food"
+        "confirm pickup" -> "Confirm Pickup"
+        "navigate to customer" -> "Go to Customer Location"
+        "arrived at customer" -> "Waiting for the Customer"
+        "complete order" -> "Well done! Order Completed"
+        else -> "Order is Cancelled"
+    }
+
     return status
 }
 
