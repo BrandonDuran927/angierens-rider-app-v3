@@ -1,0 +1,10 @@
+# Build files
+/build
+**/build
+
+# Secret files
+secrets.properties
+local.defaults.properties
+
+# Local configuration files
+local.properties
