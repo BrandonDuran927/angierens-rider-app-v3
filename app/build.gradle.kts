@@ -96,6 +96,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
+    implementation("com.google.maps.android:android-maps-utils:3.8.2")
 
 
     // Supabase
@@ -106,7 +107,6 @@ dependencies {
     implementation(libs.storage.kt)
 
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
-
 }
 
 secrets {

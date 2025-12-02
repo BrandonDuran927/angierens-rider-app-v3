@@ -27,6 +27,8 @@ import io.github.jan.supabase.realtime.postgresChangeFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
@@ -38,8 +40,11 @@ import javax.inject.Inject
 class TaskRepositoryImpl @Inject constructor(
     private val postgrest: Postgrest,
     private val realtime: Realtime,
-    private val userSessionManager: UserSessionManager
+    private val userSessionManager: UserSessionManager,
 ) : TaskRepository {
+    private val _isRealtimeFetching = MutableStateFlow(false)
+    override val isRealtimeFetching: StateFlow<Boolean> = _isRealtimeFetching
+
     override fun getDeliveryRider(): Flow<CustomResult<List<Delivery>>> = flow {
         try {
             val riderId = userSessionManager.getCurrentUserId()
@@ -359,33 +364,32 @@ class TaskRepositoryImpl @Inject constructor(
     override fun observeDeliveryStatus(deliveryId: String): Flow<CustomResult<Delivery>> = callbackFlow {
         val channel = realtime.channel("delivery_$deliveryId")
 
-        // Listen to all changes
         channel.postgresChangeFlow<PostgresAction>(
             schema = "public",
         ) {
-            // ✨ FIX: Both table and filter MUST be set here.
             table = "delivery"
             filter("delivery_id", FilterOperator.EQ, deliveryId)
         }.onEach { action ->
+            _isRealtimeFetching.value = true
+
             Log.d("TaskRepositoryImpl", "Delivery changed: $action")
-            // Re-fetch delivery data
-            // Note: .collect() suspends, which is fine here within the .onEach's coroutine scope
             getDeliveryRider(deliveryId).collect { result ->
+                Log.d("TaskRepositoryImpl", "Initial delivery status: $result")
                 send(result)
             }
+
+            _isRealtimeFetching.value = false
         }.launchIn(this)
 
-        // Note: subscribe is non-suspending, so it's fine here
         channel.subscribe(blockUntilSubscribed = true)
 
-        // Initial fetch
         getDeliveryRider(deliveryId).collect { result ->
+            Log.d("TaskRepositoryImpl", "Initial delivery status: $result")
             send(result)
         }
 
         awaitClose {
             Log.d("TaskRepositoryImpl", "Unsubscribing from delivery updates")
-            // FIX 2: Unsubscribe wrapped in a launch block
             launch {
                 channel.unsubscribe()
             }

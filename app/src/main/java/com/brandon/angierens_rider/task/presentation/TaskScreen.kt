@@ -389,7 +389,8 @@ private fun Screen(
                 onMapClick(delivery.deliveryId)
                 selectedDelivery = null
                 Log.d("TaskScreen", "Navigate to map from modal: ${delivery.deliveryId}")
-            }
+            },
+            isRiderMap = false
         )
     }
 }

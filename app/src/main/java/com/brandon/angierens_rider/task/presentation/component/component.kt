@@ -165,7 +165,8 @@ fun DeliveryCard(
 fun OrderDetailsModal(
     delivery: Delivery,
     onDismiss: () -> Unit,
-    onMapClick: () -> Unit
+    onMapClick: () -> Unit,
+    isRiderMap: Boolean
 ) {
     val totalOrderAmount = delivery.orders.sumOf { it.totalPrice }
     val grandTotal = totalOrderAmount + delivery.deliveryFee
@@ -204,21 +205,22 @@ fun OrderDetailsModal(
                 )
             }
 
-            // Address
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(imageVector = Icons.Outlined.LocationOn, contentDescription = "Location")
-                Column {
-                    Text(text = "Delivery Address", fontSize = 12.sp, color = Color.Gray)
-                    Text(
-                        text = delivery.address?.getFullAddress() ?: "Address not available",
-                        fontWeight = FontWeight.Bold
-                    )
+            if (!isRiderMap) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(imageVector = Icons.Outlined.LocationOn, contentDescription = "Location")
+                    Column {
+                        Text(text = "Delivery Address", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            text = delivery.address?.getFullAddress() ?: "Address not available",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -242,20 +244,23 @@ fun OrderDetailsModal(
                 }
             }
 
-            // Track address button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                    .background(Color(0xFFEDEDED))
-                    .padding(10.dp)
-                    .clickable { onMapClick() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = "Track Customer Address", fontWeight = FontWeight.Bold)
-                Icon(imageVector = Icons.Outlined.LocationOn, contentDescription = "Location")
+            if (!isRiderMap) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .background(Color(0xFFEDEDED))
+                        .padding(10.dp)
+                        .clickable { onMapClick() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Track Customer Address", fontWeight = FontWeight.Bold)
+                    Icon(imageVector = Icons.Outlined.LocationOn, contentDescription = "Location")
+                }
             }
+
+            // Track address button
 
             Text(
                 modifier = Modifier.padding(start = 10.dp, top = 10.dp),
@@ -358,13 +363,15 @@ fun OrderDetailsModal(
                     Text(text = "Close", color = Color(0xFF9A501E))
                 }
 
-                Button(
-                    onClick = { onMapClick() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD700)
-                    )
-                ) {
-                    Text(text = "Start Delivery", color = Color.Black)
+                if (!isRiderMap) {
+                    Button(
+                        onClick = { onMapClick() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFD700)
+                        )
+                    ) {
+                        Text(text = "Start Delivery", color = Color.Black)
+                    }
                 }
             }
         }

@@ -12,7 +12,10 @@ import com.brandon.angierens_rider.riderMap.domain.RiderMapRepository
 import com.brandon.angierens_rider.riderMap.domain.location.LocationRepository
 import com.brandon.angierens_rider.riderMap.domain.location.RiderLocation
 import com.brandon.angierens_rider.task.domain.repository.TaskRepository
+import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,7 +35,13 @@ class RiderMapViewModel @Inject constructor(
         Log.d("RiderMapViewModel", "Delivery ID: ${deliveryId.value}")
         viewModelScope.launch {
             getDelivery()
+
+            taskRepository.isRealtimeFetching.onEach { isFetching ->
+                state = state.copy(isLoading = isFetching)
+            }.launchIn(viewModelScope)
+
             observeDeliveryChanges()
+            fetchRoute()
         }
     }
 
@@ -100,13 +109,30 @@ class RiderMapViewModel @Inject constructor(
             taskRepository.observeDeliveryStatus(deliveryId.value).collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
-                        Log.d("RiderMapViewModel", "Delivery updated by Realtime: ${result.data}")
-                        state = state.copy(delivery = result.data, isLoading = false)
+                        state = state.copy(delivery = result.data)
                     }
 
                     is CustomResult.Failure -> {
                         state = state.copy(error = result.exception.message, isLoading = false)
                     }
+                }
+            }
+        }
+    }
+
+    private fun fetchRoute() {
+        viewModelScope.launch {
+            val storeLocation = LatLng(14.818589037203248, 121.05753223366108)
+            val customerLocation = state.delivery?.address?.let {
+                LatLng(it.latitude, it.longitude)
+            } ?: return@launch
+
+            when (val result = riderMapRepository.getRoute(storeLocation, customerLocation)) {
+                is CustomResult.Success -> {
+                    state = state.copy(routePoints = result.data)
+                }
+                is CustomResult.Failure -> {
+                    Log.e("RiderMapViewModel", "Failed to fetch route", result.exception)
                 }
             }
         }
