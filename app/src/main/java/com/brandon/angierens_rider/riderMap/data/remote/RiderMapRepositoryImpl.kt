@@ -4,9 +4,13 @@ import android.util.Log
 import com.brandon.angierens_rider.BuildConfig
 import com.brandon.angierens_rider.core.CustomResult
 import com.brandon.angierens_rider.riderMap.domain.RiderMapRepository
+import com.brandon.angierens_rider.riderMap.domain.location.RiderLocation
+import com.brandon.angierens_rider.task.data.mappers.toDomain
 import com.brandon.angierens_rider.task.data.remote.respond.DeliveryDto
+import com.brandon.angierens_rider.task.data.remote.respond.OrderDto
 import com.brandon.angierens_rider.task.domain.model.Delivery
 import com.google.android.gms.maps.model.LatLng
+import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,7 +26,6 @@ class RiderMapRepositoryImpl @Inject constructor(
         deliveryId: String
     ): CustomResult<String> {
         try {
-            // 1. Fetch ONLY the row with the matching deliveryId (PostgREST filtering)
             val deliveryDto = postgrest
                 .from("delivery")
                 .select {
@@ -30,7 +33,9 @@ class RiderMapRepositoryImpl @Inject constructor(
                         eq("delivery_id", deliveryId)
                     }
                 }
-                .decodeSingleOrNull<DeliveryDto>() // Gets one DTO or null
+                .decodeSingleOrNull<DeliveryDto>()
+
+
 
             val currentStatus = deliveryDto?.delivery_status ?: ""
 
@@ -46,11 +51,11 @@ class RiderMapRepositoryImpl @Inject constructor(
                 "confirm pickup" -> "navigate to customer"
                 "navigate to customer" -> "arrived at customer"
                 "arrived at customer" -> "complete order"
-                else -> throw IllegalStateException("Invalid status for update: $currentStatus")
+                else -> throw _root_ide_package_.kotlin.Exception("Invalid status for update: $currentStatus")
             }
 
             val updateOrderStatus = when (newStatus.lowercase()) {
-                "confirm pickup" -> "On Delivery" // The previous step was "navigate to customer"
+                "confirm pickup" -> "On Delivery"
                 "complete order" -> "Completed"
                 else -> null
             }
@@ -77,7 +82,10 @@ class RiderMapRepositoryImpl @Inject constructor(
                     }
             }
 
-            Log.d("RiderMapRepositoryImpl", "Delivery status updated to: $newStatus; updated order status: $updateOrderStatus")
+            Log.d(
+                "RiderMapRepositoryImpl",
+                "Delivery status updated to: $newStatus; updated order status: $updateOrderStatus"
+            )
             return CustomResult.Success(newStatus)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -138,6 +146,33 @@ class RiderMapRepositoryImpl @Inject constructor(
 
         } catch (e: Exception) {
             Log.e("RiderMapRepositoryImpl", "Error fetching route", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun saveRiderLocation(
+        location: RiderLocation,
+        riderId: String
+    ): CustomResult<Unit> {
+        if (riderId.isEmpty()) {
+            return CustomResult.Failure(Exception("Authentication error: Rider ID not found."))
+        }
+
+        return try {
+            val dto = RiderLocationDto(
+                rider_id = riderId,
+                latitude = location.latitude,
+                longitude = location.longitude
+            )
+
+            postgrest
+                .from("rider_location")
+                .upsert(value = dto) {
+                    onConflict = "rider_id"
+                }
+
+            CustomResult.Success(Unit)
+        } catch (e: Exception) {
             CustomResult.Failure(e)
         }
     }

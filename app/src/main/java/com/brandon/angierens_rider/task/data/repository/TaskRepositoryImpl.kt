@@ -50,6 +50,8 @@ class TaskRepositoryImpl @Inject constructor(
             val riderId = userSessionManager.getCurrentUserId()
                 ?: throw Exception("User not authenticated")
 
+            Log.d("TaskRepositoryImpl", "riderId: $riderId")
+
             val deliveryDtos = postgrest
                 .from("delivery")
                 .select()

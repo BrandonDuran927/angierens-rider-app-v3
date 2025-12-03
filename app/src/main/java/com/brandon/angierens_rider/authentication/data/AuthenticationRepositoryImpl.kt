@@ -77,19 +77,36 @@ class AuthenticationRepositoryImpl @Inject constructor(
             val user = supabaseClient.auth.currentUserOrNull()
             Log.d("AuthenticationRepositoryImpl", "User: $user")
 
-
-            user?.let {
-                _currentUser.value = UserSession(
-                    userId = it.id,
-                    email = it.email ?: "",
-                    user = retrieveUserFromTable(it.id)
-                )
+            if (user == null) {
+                supabaseClient.auth.signOut()
+                return CustomResult.Failure(Exception("Authentication failed"))
             }
+
+            val userFromTable = retrieveUserFromTable(user.id)
+
+            if (userFromTable.user_role != "rider") {
+                supabaseClient.auth.signOut()
+                _isAuthenticated.value = false
+                _currentUser.value = null
+
+                Log.d("AuthenticationRepositoryImpl", "Access denied: User role is ${userFromTable.user_role}, not rider")
+                return CustomResult.Failure(Exception("Access denied. This app is only for riders."))
+            }
+
+            _currentUser.value = UserSession(
+                userId = user.id,
+                email = user.email ?: "",
+                user = userFromTable
+            )
 
             _isAuthenticated.value = true
 
+            Log.d("AuthenticationRepositoryImpl", "Rider login successful")
             CustomResult.Success(Unit)
         } catch (e: Exception) {
+            _isAuthenticated.value = false
+            _currentUser.value = null
+            Log.e("AuthenticationRepositoryImpl", "Login error: ${e.message}", e)
             CustomResult.Failure(e)
         }
     }

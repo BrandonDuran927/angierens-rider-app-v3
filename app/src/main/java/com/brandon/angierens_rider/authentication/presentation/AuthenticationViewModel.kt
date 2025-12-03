@@ -40,6 +40,7 @@ class AuthenticationViewModel @Inject constructor(
             AuthenticationAction.OnLogin -> login()
             AuthenticationAction.OnLogout -> logout()
             AuthenticationAction.OnResetPassword -> TODO()
+            AuthenticationAction.ClearError -> clearError()
         }
     }
 

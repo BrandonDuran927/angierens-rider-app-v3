@@ -6,4 +6,5 @@ sealed class AuthenticationAction {
     data object OnLogin : AuthenticationAction()
     data object OnResetPassword : AuthenticationAction()
     data object OnLogout : AuthenticationAction()
+    object ClearError : AuthenticationAction()
 }

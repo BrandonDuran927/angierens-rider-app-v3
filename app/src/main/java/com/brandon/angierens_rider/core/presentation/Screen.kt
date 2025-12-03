@@ -9,7 +9,7 @@ object ModalTaskRoute
 object ModalInfoRoute
 
 @Serializable
-data class RiderMapRoute(val deliveryId: String)
+data class RiderMapRoute(val deliveryId: String, val riderId: String)
 
 @Serializable
 data object NotificationRoute

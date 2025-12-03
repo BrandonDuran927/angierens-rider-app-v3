@@ -15,3 +15,4 @@ class UserSessionManager @Inject constructor(
     fun getCurrentUserId(): String? = currentUser.value?.userId
     fun getCurrentUserEmail(): String? = currentUser.value?.email
 }
+

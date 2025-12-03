@@ -64,9 +64,9 @@ fun TaskScreenCore(
         state = viewModel.state,
         modifier = modifier,
         onAction = viewModel::onAction,
-        onMapClick = { deliveryId ->
+        onMapClick = { deliveryId, riderId ->
             // Navigate to map with delivery ID
-            navController.navigate(RiderMapRoute(deliveryId))
+            navController.navigate(RiderMapRoute(deliveryId, riderId))
         }
     )
 }
@@ -76,7 +76,7 @@ private fun Screen(
     state: TaskState,
     modifier: Modifier = Modifier,
     onAction: (TaskAction) -> Unit = {},
-    onMapClick: (String) -> Unit = {}
+    onMapClick: (String, String) -> Unit
 ) {
     var selectedDelivery by remember { mutableStateOf<Delivery?>(null) }
     var expanded by remember { mutableStateOf(false) }
@@ -358,11 +358,9 @@ private fun Screen(
                                 delivery = delivery,
                                 onClick = {
                                     selectedDelivery = delivery
-                                    Log.d("TaskScreen", "Selected delivery: ${delivery.deliveryId}")
                                 },
                                 onMapClick = {
-                                    onMapClick(delivery.deliveryId)
-                                    Log.d("TaskScreen", "Navigate to map for: ${delivery.deliveryId}")
+                                    onMapClick(delivery.deliveryId, delivery.riderId ?: "")
                                 }
                             )
                         }
@@ -386,7 +384,7 @@ private fun Screen(
                 Log.d("TaskScreen", "Dismissed modal")
             },
             onMapClick = {
-                onMapClick(delivery.deliveryId)
+                onMapClick(delivery.deliveryId, delivery.riderId ?: "")
                 selectedDelivery = null
                 Log.d("TaskScreen", "Navigate to map from modal: ${delivery.deliveryId}")
             },
@@ -395,42 +393,42 @@ private fun Screen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun ScreenPreviewLoading() {
-    AngierensRiderTheme {
-        Screen(
-            state = TaskState(isLoading = true),
-            modifier = Modifier
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ScreenPreviewError() {
-    AngierensRiderTheme {
-        Screen(
-            state = TaskState(
-                error = "Failed to load deliveries. Please check your connection."
-            ),
-            modifier = Modifier
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ScreenPreviewEmpty() {
-    AngierensRiderTheme {
-        Screen(
-            state = TaskState(
-                deliveries = emptyList()
-            ),
-            modifier = Modifier
-        )
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//private fun ScreenPreviewLoading() {
+//    AngierensRiderTheme {
+//        Screen(
+//            state = TaskState(isLoading = true),
+//            modifier = Modifier
+//        )
+//    }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//private fun ScreenPreviewError() {
+//    AngierensRiderTheme {
+//        Screen(
+//            state = TaskState(
+//                error = "Failed to load deliveries. Please check your connection."
+//            ),
+//            modifier = Modifier
+//        )
+//    }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//private fun ScreenPreviewEmpty() {
+//    AngierensRiderTheme {
+//        Screen(
+//            state = TaskState(
+//                deliveries = emptyList()
+//            ),
+//            modifier = Modifier
+//        )
+//    }
+//}
 
 //@Preview(showBackground = true)
 //@Composable

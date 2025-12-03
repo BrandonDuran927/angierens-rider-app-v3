@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,10 @@ import com.brandon.angierens_rider.riderMap.domain.location.RiderLocation
 import com.brandon.angierens_rider.task.domain.repository.TaskRepository
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -30,6 +35,9 @@ class RiderMapViewModel @Inject constructor(
         private set
 
     private val deliveryId = savedStateHandle.getStateFlow("deliveryId", "")
+    private val riderId = savedStateHandle.getStateFlow("riderId", "")
+
+    private var locationJob: Job? = null
 
     init {
         Log.d("RiderMapViewModel", "Delivery ID: ${deliveryId.value}")
@@ -45,9 +53,12 @@ class RiderMapViewModel @Inject constructor(
         }
     }
 
+    @OptIn(FlowPreview::class)
     fun startTracking() {
         if (state.isTracking) return
         state = state.copy(isTracking = true, isLoading = true)
+
+        locationJob?.cancel()
 
         try {
             locationRepository.startLocationUpdates { latitude, longitude ->
@@ -56,7 +67,21 @@ class RiderMapViewModel @Inject constructor(
                     isLoading = false
                 )
             }
+
+            locationJob = viewModelScope.launch {
+                snapshotFlow { state.riderLocation }
+                    .filterNotNull()
+                    .debounce(5000L)
+                    .collect { location ->
+                        val result = riderMapRepository.saveRiderLocation(location, riderId.value)
+
+                        if (result is CustomResult.Failure) {
+                            Log.e("RiderMapViewModel", "Failed to save rider location", result.exception)
+                        }
+                    }
+            }
         } catch (e: SecurityException) {
+            Log.e("RiderMapViewModel", "Failed to start location updates", e)
             state = state.copy(isTracking = false, isLoading = false)
         }
     }
@@ -64,7 +89,6 @@ class RiderMapViewModel @Inject constructor(
     fun onAction(action: RiderMapAction) {
         when (action) {
             is RiderMapAction.UpdateOrderStatus -> {
-                Log.d("RiderMapViewModel", "Updating order status for delivery: ${deliveryId.value}")
                 state = state.copy(isLoading = true)
 
                 viewModelScope.launch {
@@ -72,10 +96,9 @@ class RiderMapViewModel @Inject constructor(
                         deliveryId = deliveryId.value
                     )
 
-                    Log.d("RiderMapViewModel", "Delivery status updated: $status")
-
                     when (status) {
                         is CustomResult.Success -> {
+                            Log.d("RiderMapViewModel", "Delivery status updated: ${status.data}")
                             state = state.copy(updatedDeliveryStatus = status.data, isLoading = false)
                         }
                         is CustomResult.Failure -> {

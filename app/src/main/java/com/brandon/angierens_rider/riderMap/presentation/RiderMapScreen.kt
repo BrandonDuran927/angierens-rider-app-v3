@@ -70,7 +70,10 @@ import com.brandon.angierens_rider.R
 import com.brandon.angierens_rider.ui.theme.AngierensRiderTheme
 import androidx.core.graphics.createBitmap
 import com.brandon.angierens_rider.core.CommunicationHelper
+import com.brandon.angierens_rider.core.CustomResult
 import com.brandon.angierens_rider.core.NavigationHelper
+import com.brandon.angierens_rider.task.data.mappers.toDomain
+import com.brandon.angierens_rider.task.data.remote.respond.OrderDto
 import com.brandon.angierens_rider.task.domain.model.Delivery
 import com.brandon.angierens_rider.task.presentation.component.OrderDetailsModal
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -162,6 +165,9 @@ private fun Screen(
         position = CameraPosition.fromLatLngZoom(currentLocation, 18f)
     }
 
+    val isOrderNotReady = if (state.delivery?.orders?.firstOrNull()?.orderStatus == "Pending" || state.delivery?.orders?.firstOrNull()?.orderStatus == "Queueing"
+        || state.delivery?.orders?.firstOrNull()?.orderStatus == "Preparing" || state.delivery?.orders?.firstOrNull()?.orderStatus == "Cooking") true else false
+
     LaunchedEffect(cameraPositionState.isMoving) {
         if (cameraPositionState.isMoving) {
             isMapMoving.value = true
@@ -222,7 +228,8 @@ private fun Screen(
                 onUpdateStatus = { onAction(RiderMapAction.UpdateOrderStatus) },
                 onNavigate = {
                     Toast.makeText(context, "Opening navigation...", Toast.LENGTH_SHORT).show()
-                }
+                },
+                isOrderNotReady = isOrderNotReady
             )
         },
         sheetContainerColor = Color.White,
@@ -305,7 +312,6 @@ private fun Screen(
     }
 }
 
-// ✨ REFACTORED: The card content is now the sheet content
 @Composable
 fun RideInfoSheetContent(
     modifier: Modifier = Modifier,
@@ -317,7 +323,8 @@ fun RideInfoSheetContent(
     pickupAddress: String,
     amount: String,
     onUpdateStatus: () -> Unit,
-    onNavigate: () -> Unit
+    onNavigate: () -> Unit,
+    isOrderNotReady: Boolean
 ) {
     val context = LocalContext.current
     val showModal = remember { mutableStateOf(false) }
@@ -450,7 +457,7 @@ fun RideInfoSheetContent(
                     color = Color.Black
                 )
                 Text(
-                    text = amount,
+                    text = String.format("%.2f", amount.toDoubleOrNull() ?: 0.0),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -485,10 +492,10 @@ fun RideInfoSheetContent(
                     containerColor = Color(0xFF9A501E), // Use a strong primary color
                     contentColor = Color.White
                 ),
-                enabled = if (deliveryStatus == "Order Completed") false else true
+                enabled = if (deliveryStatus == "Order Completed" || isOrderNotReady) false else true
             ) {
                 Text(
-                    text = deliveryStatus,
+                    text = if (isOrderNotReady) "Order not ready..." else deliveryStatus,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(vertical = 4.dp)

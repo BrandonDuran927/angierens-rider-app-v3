@@ -42,8 +42,6 @@ private fun Screen(
     state: AuthenticationState,
     onAction: (AuthenticationAction) -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
@@ -163,6 +161,30 @@ private fun Screen(
             textAlign = TextAlign.Center,
             fontSize = 13.sp,
             color = Color.Black.copy(alpha = 0.5f)
+        )
+    }
+
+    if (state.error?.isNotEmpty() == true) {
+        AlertDialog(
+            onDismissRequest = {
+                onAction(AuthenticationAction.ClearError)
+            },
+            title = {
+                Text(text = "Login Failed", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(text = state.error)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onAction(AuthenticationAction.ClearError)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9A501E))
+                ) {
+                    Text("OK")
+                }
+            }
         )
     }
 }
